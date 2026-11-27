@@ -14,18 +14,23 @@ import AdminSidebar from './AdminSidebar';
 import AttendanceTable from './AttendanceTable';
 import EmployeeProfileDrawer from './EmployeeProfileDrawer';
 import { exportAttendanceToExcel } from '../../utils/exportExcel';
+import { JENIS_LABEL, uniqueAsal, matchesAsal } from '../../utils/pesertaUtils';
 
 export default function AdminView({ employees, records, onEmployeeSaved }) {
   const [page, setPage] = useState('report'); // 'report' | 'peserta'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [jenisFilter, setJenisFilter] = useState('');
+  const [asalFilter, setAsalFilter] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   const availableMonths = useMemo(() => {
     const months = new Set(records.map((r) => r.date.slice(0, 7)));
     return Array.from(months).sort().reverse();
   }, [records]);
+
+  const asalOptions = useMemo(() => uniqueAsal(records), [records]);
 
   const filteredRecords = useMemo(() => {
     return records.filter((rec) => {
@@ -35,9 +40,10 @@ export default function AdminView({ employees, records, onEmployeeSaved }) {
         rec.employeeNo.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesMonth = !selectedMonth || rec.date.startsWith(selectedMonth);
       const matchesDate = !selectedDate || rec.date === selectedDate;
-      return matchesName && matchesMonth && matchesDate;
+      const matchesJenis = !jenisFilter || rec.jenis === jenisFilter;
+      return matchesName && matchesMonth && matchesDate && matchesJenis && matchesAsal(rec.asal, asalFilter);
     });
-  }, [records, searchQuery, selectedMonth, selectedDate]);
+  }, [records, searchQuery, selectedMonth, selectedDate, jenisFilter, asalFilter]);
 
   const selectedEmployee = useMemo(
     () => employees.find((e) => e.id === selectedEmployeeId) || null,
@@ -70,6 +76,8 @@ export default function AdminView({ employees, records, onEmployeeSaved }) {
     setSearchQuery('');
     setSelectedMonth('');
     setSelectedDate('');
+    setJenisFilter('');
+    setAsalFilter('');
   };
 
   return (
@@ -200,7 +208,33 @@ export default function AdminView({ employees, records, onEmployeeSaved }) {
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
           />
 
-          {(searchQuery || selectedMonth || selectedDate) && (
+          <select
+            value={jenisFilter}
+            onChange={(e) => setJenisFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+          >
+            <option value="">Semua Jenis</option>
+            {Object.entries(JENIS_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={asalFilter}
+            onChange={(e) => setAsalFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+          >
+            <option value="">Semua Asal</option>
+            {asalOptions.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+
+          {(searchQuery || selectedMonth || selectedDate || jenisFilter || asalFilter) && (
             <button
               type="button"
               onClick={resetFilters}
