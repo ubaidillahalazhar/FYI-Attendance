@@ -2,7 +2,7 @@
 
 Full-stack modular prototype & starter architecture built with:
 - **Frontend:** React.js (Vite), Tailwind CSS, Lucide Icons
-- **Backend:** Laravel 11 REST API (Service-Repository pattern, Haversine Geofencing validation)
+- **Backend:** Laravel 12 REST API (Service-Repository pattern, Haversine Geofencing validation)
 - **Database:** PostgreSQL 16
 
 ---
@@ -60,11 +60,11 @@ Buat database bernama `geoattend_hr`, lalu jalankan migrasi Laravel (langkah 2) 
 Karena folder `backend/` berisi source code inti (Models, Controllers, Services, Migrations, Routes, Config) tanpa folder `vendor/`, ikuti langkah berikut untuk memasangnya ke proyek Laravel baru:
 
 ```bash
-# 1. Buat skeleton proyek Laravel 11 baru (jika belum ada)
+# 1. Buat skeleton proyek Laravel 12 baru (jika belum ada)
 composer create-project laravel/laravel geoattend-api
 cd geoattend-api
 
-# 2. Aktifkan dukungan API routing (Laravel 11)
+# 2. Aktifkan dukungan API routing (Laravel 12)
 php artisan install:api
 
 # 3. Salin seluruh isi folder backend/ dari ZIP ini ke dalam folder geoattend-api/
