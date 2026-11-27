@@ -96,7 +96,7 @@ export default function PesertaPage({ employees, onEmployeeSaved }) {
         (!q || e.name.toLowerCase().includes(q) || e.employeeNo.toLowerCase().includes(q)) &&
         (!jenis || e.jenis === jenis) &&
         matchesAsal(e.asal, asal) &&
-        (status === 'all' || (status === 'active') === e.isActive)
+        (status === 'all' || (status === 'active') === (e.isActive !== false))
     );
   }, [employees, search, jenis, asal, status]);
 
@@ -193,10 +193,10 @@ export default function PesertaPage({ employees, onEmployeeSaved }) {
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      e.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      e.isActive !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                     }`}
                   >
-                    {e.isActive ? 'Aktif' : 'Nonaktif'}
+                    {e.isActive !== false ? 'Aktif' : 'Nonaktif'}
                   </span>
                 </td>
                 {!USE_MOCK && (
@@ -209,7 +209,7 @@ export default function PesertaPage({ employees, onEmployeeSaved }) {
                         Reset Password
                       </button>
                       <button type="button" className={actionCls} onClick={() => toggleStatus(e)}>
-                        {e.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        {e.isActive !== false ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
                     </div>
                   </td>
