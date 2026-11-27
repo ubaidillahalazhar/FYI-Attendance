@@ -20,13 +20,13 @@ class EmployeeManagementTest extends TestCase
     {
         $this->shift ??= Shift::create(['name' => 'Pagi', 'shift_in' => '08:00', 'shift_out' => '17:00', 'schedule_minutes' => 540]);
         $emp = Employee::create([
-            'employee_no' => $no, 'name' => "Emp $no", 'email' => "$no@x.id",
+            'employee_no' => $no, 'name' => "Emp $no", 'email' => strtolower("$no@x.id"),
             'position' => 'Staff', 'department' => 'IT', 'shift_id' => $this->shift->id,
             'avatar_initials' => 'EM', 'is_active' => $active,
             'jenis' => 'pkl', 'asal' => 'SMKN 1 Bekasi',
         ]);
 
-        return User::factory()->create(['email' => "$no@x.id", 'role' => 'peserta', 'employee_id' => $emp->id]);
+        return User::factory()->create(['email' => strtolower("$no@x.id"), 'role' => 'peserta', 'employee_id' => $emp->id]);
     }
 
     private function hr(): User
@@ -93,5 +93,131 @@ class EmployeeManagementTest extends TestCase
         $lines = explode("\n", ltrim($csv, "\xEF\xBB\xBF"));
         $this->assertStringStartsWith('No.,"Employee No.","Employee Name",Jenis,Asal,Date', $lines[0]);
         $this->assertStringContainsString(',PKL,"SMKN 1 Bekasi",', $lines[1]);
+    }
+
+    private function payload(array $o = []): array
+    {
+        $this->shift ??= Shift::create(['name' => 'Pagi', 'shift_in' => '08:00', 'shift_out' => '17:00', 'schedule_minutes' => 540]);
+
+        return array_merge([
+            'employee_no' => 'PKL-001', 'name' => 'Rina Ayu', 'email' => 'Rina.PKL@Mail.com',
+            'jenis' => 'pkl', 'asal' => '  SMKN 1 Bekasi ', 'position' => 'Intern', 'department' => 'IT',
+            'shift_id' => $this->shift->id, 'password' => 'password123',
+        ], $o);
+    }
+
+    private function login(string $email, string $password)
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->postJson('/api/login', ['email' => $email, 'password' => $password]);
+    }
+
+    public function test_hr_creates_peserta_with_login(): void
+    {
+        Sanctum::actingAs($this->hr());
+        $this->postJson('/api/employees', $this->payload())->assertCreated()->assertJsonPath('data.isActive', true);
+
+        $this->assertDatabaseHas('employees', ['email' => 'rina.pkl@mail.com', 'asal' => 'SMKN 1 Bekasi', 'avatar_initials' => 'RA']);
+        $emp = Employee::where('employee_no', 'PKL-001')->first();
+        $this->assertDatabaseHas('users', ['email' => 'rina.pkl@mail.com', 'role' => 'peserta', 'employee_id' => $emp->id]);
+        $this->login('rina.pkl@mail.com', 'password123')->assertOk();
+    }
+
+    public function test_create_rejects_duplicate_employee_no(): void
+    {
+        $this->peserta('EMP-1');
+        Sanctum::actingAs($this->hr());
+        $this->postJson('/api/employees', $this->payload(['employee_no' => 'EMP-1']))->assertJsonValidationErrors('employee_no');
+    }
+
+    public function test_create_rejects_email_used_by_hr_account(): void
+    {
+        Sanctum::actingAs($this->hr());
+        $this->postJson('/api/employees', $this->payload(['email' => 'HR@x.id']))->assertJsonValidationErrors('email');
+    }
+
+    public function test_create_rejects_invalid_jenis_and_short_password(): void
+    {
+        Sanctum::actingAs($this->hr());
+        $this->postJson('/api/employees', $this->payload(['jenis' => 'magang', 'password' => '1234567']))
+            ->assertJsonValidationErrors(['jenis', 'password']);
+    }
+
+    public function test_peserta_cannot_create_employee(): void
+    {
+        Sanctum::actingAs($this->peserta());
+        $this->postJson('/api/employees', $this->payload())->assertForbidden();
+    }
+
+    public function test_update_changes_user_email_too(): void
+    {
+        $u = $this->peserta('EMP-1');
+        Sanctum::actingAs($this->hr());
+        $body = $this->payload(['employee_no' => 'EMP-1', 'email' => 'baru@x.id']);
+        unset($body['password']);
+        $this->putJson("/api/employees/{$u->employee_id}", $body)->assertOk()->assertJsonPath('data.email', 'baru@x.id');
+
+        $this->assertSame('baru@x.id', $u->fresh()->email);
+        $u->update(['password' => 'password123']);
+        $this->login('baru@x.id', 'password123')->assertOk();
+    }
+
+    public function test_update_without_changing_email_succeeds(): void
+    {
+        $u = $this->peserta('EMP-1');
+        Sanctum::actingAs($this->hr());
+        $this->putJson("/api/employees/{$u->employee_id}", $this->payload(['employee_no' => 'EMP-1', 'email' => 'emp-1@x.id', 'position' => 'Lead']))
+            ->assertOk()->assertJsonPath('data.position', 'Lead');
+    }
+
+    public function test_update_rejects_email_of_another_account(): void
+    {
+        $u = $this->peserta('EMP-1');
+        $this->peserta('EMP-2');
+        Sanctum::actingAs($this->hr());
+        $this->putJson("/api/employees/{$u->employee_id}", $this->payload(['employee_no' => 'EMP-1', 'email' => 'emp-2@x.id']))
+            ->assertJsonValidationErrors('email');
+    }
+
+    private function pesertaWithToken(): array
+    {
+        $u = $this->peserta('EMP-1');
+        $u->update(['password' => 'password123']);
+        $token = $this->login('emp-1@x.id', 'password123')->assertOk()->json('token');
+
+        return [$u, $token];
+    }
+
+    public function test_deactivate_revokes_tokens(): void
+    {
+        [$u, $token] = $this->pesertaWithToken();
+        Sanctum::actingAs($this->hr());
+        $this->patchJson("/api/employees/{$u->employee_id}/status", ['is_active' => false])->assertOk()->assertJsonPath('data.isActive', false);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/me')->assertUnauthorized();
+        $this->login('emp-1@x.id', 'password123')->assertStatus(422);
+    }
+
+    public function test_reactivate_allows_login(): void
+    {
+        [$u] = $this->pesertaWithToken();
+        Sanctum::actingAs($this->hr());
+        $this->patchJson("/api/employees/{$u->employee_id}/status", ['is_active' => false])->assertOk();
+        $this->patchJson("/api/employees/{$u->employee_id}/status", ['is_active' => true])->assertOk();
+        $this->login('emp-1@x.id', 'password123')->assertOk();
+    }
+
+    public function test_reset_password_revokes_tokens_and_sets_new_password(): void
+    {
+        [$u, $token] = $this->pesertaWithToken();
+        Sanctum::actingAs($this->hr());
+        $this->putJson("/api/employees/{$u->employee_id}/password", ['password' => 'rahasia99'])->assertNoContent();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/me')->assertUnauthorized();
+        $this->login('emp-1@x.id', 'password123')->assertStatus(422);
+        $this->login('emp-1@x.id', 'rahasia99')->assertOk();
     }
 }

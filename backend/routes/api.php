@@ -24,6 +24,10 @@ Route::middleware(['auth:sanctum', 'can:peserta'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'can:hr'])->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::post('/employees', [EmployeeController::class, 'store']);
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::patch('/employees/{employee}/status', [EmployeeController::class, 'updateStatus']);
+    Route::put('/employees/{employee}/password', [EmployeeController::class, 'updatePassword']);
     Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/employees/{employee}/attendance', [AttendanceController::class, 'employeeMonthlyHistory']);
     Route::get('/overtime-requests', [OvertimeController::class, 'index']);

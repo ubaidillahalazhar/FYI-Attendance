@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
@@ -28,6 +29,11 @@ class Employee extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class);
     }
 
     public function attendances(): HasMany
