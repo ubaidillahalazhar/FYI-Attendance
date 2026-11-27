@@ -1,3 +1,4 @@
+// Mock/demo mode only; in API mode the office comes from the server (`user.office`).
 export const OFFICE_COORDS = {
   lat: Number(import.meta.env.VITE_OFFICE_LAT || -6.3017),
   lng: Number(import.meta.env.VITE_OFFICE_LNG || 107.1705),
@@ -23,9 +24,9 @@ export function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Request live browser geolocation and validate against office radius.
+ * Request a fresh browser geolocation fix and compare it with the given office radius.
  */
-export function checkRealBrowserLocation() {
+export function checkRealBrowserLocation(office) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation tidak didukung oleh browser ini.'));
@@ -34,24 +35,25 @@ export function checkRealBrowserLocation() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
         const distance = calculateDistanceMeters(
           latitude,
           longitude,
-          OFFICE_COORDS.lat,
-          OFFICE_COORDS.lng
+          office.lat,
+          office.lng
         );
         resolve({
           lat: latitude,
           lng: longitude,
+          accuracy,
           distance,
-          isInside: distance <= OFFICE_COORDS.radiusMeters,
+          isInside: distance <= office.radiusMeters,
         });
       },
       (err) => {
         reject(new Error(err.message || 'Gagal mengakses izin GPS browser.'));
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
   });
 }

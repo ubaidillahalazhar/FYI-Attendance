@@ -88,17 +88,17 @@ export const attendanceApi = {
     return request(`/employees/${employeeId}/attendance${query}`);
   },
 
-  async clockIn({ latitude, longitude }) {
+  async clockIn({ latitude, longitude, accuracy }) {
     return request('/attendance/clock-in', {
       method: 'POST',
-      body: JSON.stringify({ latitude, longitude }),
+      body: JSON.stringify({ latitude, longitude, accuracy }),
     });
   },
 
-  async clockOut({ latitude, longitude }) {
+  async clockOut({ latitude, longitude, accuracy }) {
     return request('/attendance/clock-out', {
       method: 'POST',
-      body: JSON.stringify({ latitude, longitude }),
+      body: JSON.stringify({ latitude, longitude, accuracy }),
     });
   },
 
