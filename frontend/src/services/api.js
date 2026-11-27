@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// Relative by default: Vite proxies /api to Laravel, so no CORS and it works from a phone on the LAN.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
 
 const TOKEN_KEY = 'geoattend_token';
