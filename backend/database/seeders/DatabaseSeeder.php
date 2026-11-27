@@ -38,8 +38,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         $employees = [];
-        foreach ($employeesData as [$no, $name, $email, $pos, $dept, $shiftId, $initials]) {
-            $employees[] = Employee::firstOrCreate(
+        foreach ($employeesData as $i => [$no, $name, $email, $pos, $dept, $shiftId, $initials]) {
+            $employees[] = Employee::updateOrCreate(
                 ['employee_no' => $no],
                 [
                     'name' => $name,
@@ -48,6 +48,8 @@ class DatabaseSeeder extends Seeder
                     'department' => $dept,
                     'shift_id' => $shiftId,
                     'avatar_initials' => $initials,
+                    'jenis' => $i < 3 ? 'pkl' : 'outsourcing',
+                    'asal' => $i < 3 ? 'SMKN 1 Bekasi' : 'PT Mitra Tenaga Kerja',
                 ]
             );
         }

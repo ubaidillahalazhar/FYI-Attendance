@@ -1,7 +1,11 @@
+import { JENIS_LABEL } from './pesertaUtils';
+
 export const ATTENDANCE_HEADERS = [
   'No.',
   'Employee No.',
   'Employee Name',
+  'Jenis',
+  'Asal',
   'Date',
   'Position',
   'Shift Name',
@@ -37,6 +41,8 @@ export function exportAttendanceToExcel(records, filename = 'attendance-report.c
     idx + 1,
     row.employeeNo,
     row.employeeName,
+    JENIS_LABEL[row.jenis] ?? '',
+    row.asal ?? '',
     row.date,
     row.position,
     row.shiftName,

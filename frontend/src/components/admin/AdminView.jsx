@@ -9,21 +9,28 @@ import {
   Clock4,
   RotateCcw,
 } from 'lucide-react';
+import PesertaPage from './PesertaPage';
 import AdminSidebar from './AdminSidebar';
 import AttendanceTable from './AttendanceTable';
 import EmployeeProfileDrawer from './EmployeeProfileDrawer';
 import { exportAttendanceToExcel } from '../../utils/exportExcel';
+import { JENIS_LABEL, uniqueAsal, matchesAsal } from '../../utils/pesertaUtils';
 
-export default function AdminView({ employees, records }) {
+export default function AdminView({ employees, records, onEmployeeSaved }) {
+  const [page, setPage] = useState('report'); // 'report' | 'peserta'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [jenisFilter, setJenisFilter] = useState('');
+  const [asalFilter, setAsalFilter] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   const availableMonths = useMemo(() => {
     const months = new Set(records.map((r) => r.date.slice(0, 7)));
     return Array.from(months).sort().reverse();
   }, [records]);
+
+  const asalOptions = useMemo(() => uniqueAsal(records), [records]);
 
   const filteredRecords = useMemo(() => {
     return records.filter((rec) => {
@@ -33,9 +40,10 @@ export default function AdminView({ employees, records }) {
         rec.employeeNo.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesMonth = !selectedMonth || rec.date.startsWith(selectedMonth);
       const matchesDate = !selectedDate || rec.date === selectedDate;
-      return matchesName && matchesMonth && matchesDate;
+      const matchesJenis = !jenisFilter || rec.jenis === jenisFilter;
+      return matchesName && matchesMonth && matchesDate && matchesJenis && matchesAsal(rec.asal, asalFilter);
     });
-  }, [records, searchQuery, selectedMonth, selectedDate]);
+  }, [records, searchQuery, selectedMonth, selectedDate, jenisFilter, asalFilter]);
 
   const selectedEmployee = useMemo(
     () => employees.find((e) => e.id === selectedEmployeeId) || null,
@@ -68,13 +76,40 @@ export default function AdminView({ employees, records }) {
     setSearchQuery('');
     setSelectedMonth('');
     setSelectedDate('');
+    setJenisFilter('');
+    setAsalFilter('');
   };
 
   return (
     <div className="flex min-h-[calc(100vh-61px)] bg-slate-50">
-      <AdminSidebar totalEmployees={employees.length} totalRecords={records.length} />
+      <AdminSidebar activePage={page} onNavigate={setPage} totalEmployees={employees.length} totalRecords={records.length} />
 
       <main className="min-w-0 flex-1 p-5 lg:p-8">
+        {/* Mobile tabs (sidebar is hidden below lg) */}
+        <div className="mb-4 grid grid-cols-2 gap-2 lg:hidden">
+          {[
+            ['report', 'Laporan Absensi'],
+            ['peserta', 'Peserta'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setPage(id)}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                page === id
+                  ? 'bg-navy-900 text-white'
+                  : 'border border-slate-300 bg-white text-slate-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {page === 'peserta' ? (
+          <PesertaPage employees={employees} onEmployeeSaved={onEmployeeSaved} />
+        ) : (
+          <>
         {/* Page Heading */}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -173,7 +208,33 @@ export default function AdminView({ employees, records }) {
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
           />
 
-          {(searchQuery || selectedMonth || selectedDate) && (
+          <select
+            value={jenisFilter}
+            onChange={(e) => setJenisFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+          >
+            <option value="">Semua Jenis</option>
+            {Object.entries(JENIS_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={asalFilter}
+            onChange={(e) => setAsalFilter(e.target.value)}
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+          >
+            <option value="">Semua Asal</option>
+            {asalOptions.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+
+          {(searchQuery || selectedMonth || selectedDate || jenisFilter || asalFilter) && (
             <button
               type="button"
               onClick={resetFilters}
@@ -196,6 +257,8 @@ export default function AdminView({ employees, records }) {
           records={filteredRecords}
           onSelectEmployee={(empId) => setSelectedEmployeeId(empId)}
         />
+          </>
+        )}
       </main>
 
       {/* Interactive Employee Profile Side-Drawer */}

@@ -22,6 +22,10 @@ class EmployeeResource extends JsonResource
             'shiftOut' => substr($this->shift->shift_out, 0, 5),
             'shiftScheduleMinute' => $this->shift->schedule_minutes,
             'avatarInitials' => $this->avatar_initials,
+            'jenis' => $this->jenis,
+            'asal' => $this->asal,
+            'isActive' => (bool) $this->is_active,
+            'shiftId' => $this->shift_id,
         ];
     }
 }
