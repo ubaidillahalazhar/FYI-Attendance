@@ -46,3 +46,4 @@ bukti peserta hadir di kantor.
 ## Sebelum go-live
 Isi `OFFICE_LAT`, `OFFICE_LNG`, `OFFICE_RADIUS_METERS` dengan titik kantor asli
 (default `-6.3017, 107.1705` kemungkinan contoh).
+Frontend **wajib diakses lewat HTTPS** (atau `localhost`): browser HP menolak GPS di `http://<IP>`.

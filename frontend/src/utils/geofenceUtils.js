@@ -51,7 +51,12 @@ export function checkRealBrowserLocation(office) {
         });
       },
       (err) => {
-        reject(new Error(err.message || 'Gagal mengakses izin GPS browser.'));
+        const hints = {
+          1: 'Izin lokasi ditolak. Buka pengaturan situs di browser, izinkan Lokasi, lalu muat ulang halaman.',
+          2: 'Lokasi tidak tersedia. Nyalakan GPS/Lokasi di HP, lalu ulangi.',
+          3: 'GPS terlalu lama merespons. Coba dekat jendela atau area terbuka, lalu ulangi.',
+        };
+        reject(new Error(hints[err.code] || err.message || 'Gagal mengakses izin GPS browser.'));
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );

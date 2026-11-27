@@ -92,6 +92,13 @@ class AttendanceController extends Controller
         }
         $acc = (int) round($accuracy);
 
+        // ponytail: >1000 m means the OS only shares approximate location; retrying won't help.
+        if ($accuracy > 1000) {
+            return response()->json([
+                'message' => "Lokasi HP hanya perkiraan (±{$acc} m). Aktifkan 'Lokasi Akurat / Precise Location' untuk browser ini, lalu ulangi.",
+            ], 422);
+        }
+
         return response()->json([
             'message' => "Akurasi GPS ±{$acc} m terlalu rendah (maks {$max} m). Coba dekat jendela atau area terbuka, lalu ulangi.",
         ], 422);

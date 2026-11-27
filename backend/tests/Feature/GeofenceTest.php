@@ -49,6 +49,15 @@ class GeofenceTest extends TestCase
         $this->assertSame(0, Attendance::count());
     }
 
+    public function test_clock_in_approximate_location_gets_precise_location_hint(): void
+    {
+        Sanctum::actingAs($this->peserta());
+        $this->postJson('/api/attendance/clock-in', self::OFFICE + ['accuracy' => 2500])
+            ->assertStatus(422)
+            ->assertJsonPath('message', "Lokasi HP hanya perkiraan (±2500 m). Aktifkan 'Lokasi Akurat / Precise Location' untuk browser ini, lalu ulangi.");
+        $this->assertSame(0, Attendance::count());
+    }
+
     public function test_clock_in_accepts_accuracy_at_max(): void
     {
         Sanctum::actingAs($this->peserta());

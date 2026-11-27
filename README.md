@@ -85,6 +85,8 @@ Aplikasi frontend akan berjalan di `http://localhost:5173`.
 > Di file `frontend/.env`, variabel `VITE_USE_MOCK=true` diaktifkan secara default agar Anda bisa langsung mencoba seluruh UI/UX (termasuk *Clock In/Out*, simulasi *Geofence*, *Request Overtime*, dan *Export Excel*) bahkan sebelum menjalankan backend Laravel.
 > Halaman login hanya berfungsi dengan `VITE_USE_MOCK=false`; setel nilai itu ketika backend Laravel + PostgreSQL sudah berjalan di `http://localhost:8000`.
 
+> **GPS absen (mode API):** titik kantor diatur di `backend/.env` (`OFFICE_LAT`, `OFFICE_LNG`, `OFFICE_RADIUS_METERS`, `GEOFENCE_MAX_ACCURACY_METERS`). Absen ditolak bila di luar radius atau akurasi GPS lebih buruk dari batas. Browser HP **hanya mengizinkan GPS lewat HTTPS** (atau `localhost`), jadi untuk dipakai di HP, frontend harus disajikan lewat HTTPS. Backend butuh PHP ≥ 8.4.1 (sesuai `composer.lock`).
+
 ---
 
 ## Akun Login (Seed)

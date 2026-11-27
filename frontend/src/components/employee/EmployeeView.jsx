@@ -214,6 +214,12 @@ export default function EmployeeView({
 
           {/* Clock In & Clock Out Buttons */}
           <div>
+            {gpsLoading && (
+              <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-teal-700">
+                <Navigation className="h-3.5 w-3.5 animate-pulse" />
+                <span>Mencari lokasi GPS…</span>
+              </div>
+            )}
             {lockedBySimulator && (
               <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600">
                 <Lock className="h-3.5 w-3.5" />
