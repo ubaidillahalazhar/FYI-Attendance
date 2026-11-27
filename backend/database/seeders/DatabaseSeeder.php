@@ -5,9 +5,11 @@ namespace Database\Seeders;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Shift;
+use App\Models\User;
 use App\Services\AttendanceCalculatorService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -48,6 +50,16 @@ class DatabaseSeeder extends Seeder
                     'avatar_initials' => $initials,
                 ]
             );
+        }
+
+        // Akun login: password 'password' untuk semua (ganti di production)
+        User::updateOrCreate(['email' => 'hr@company.co.id'], [
+            'name' => 'Admin HR', 'password' => Hash::make('password'), 'role' => 'hr', 'employee_id' => null,
+        ]);
+        foreach ($employees as $employee) {
+            User::updateOrCreate(['email' => $employee->email], [
+                'name' => $employee->name, 'password' => Hash::make('password'), 'role' => 'peserta', 'employee_id' => $employee->id,
+            ]);
         }
 
         $calculator = new AttendanceCalculatorService();

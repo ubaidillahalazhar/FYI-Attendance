@@ -57,27 +57,14 @@ Buat database bernama `geoattend_hr`, lalu jalankan migrasi Laravel (langkah 2) 
 
 ### 2. Setup Backend (Laravel API)
 
-Karena folder `backend/` berisi source code inti (Models, Controllers, Services, Migrations, Routes, Config) tanpa folder `vendor/`, ikuti langkah berikut untuk memasangnya ke proyek Laravel baru:
+Pastikan database PostgreSQL `geoattend_hr` (dan `geoattend_hr_test` untuk `php artisan test`) sudah dibuat.
 
 ```bash
-# 1. Buat skeleton proyek Laravel 12 baru (jika belum ada)
-composer create-project laravel/laravel geoattend-api
-cd geoattend-api
-
-# 2. Aktifkan dukungan API routing (Laravel 12)
-php artisan install:api
-
-# 3. Salin seluruh isi folder backend/ dari ZIP ini ke dalam folder geoattend-api/
-#    (timpa file app/, config/, database/, routes/, dan .env.example)
-
-# 4. Salin konfigurasi environment
-cp .env.example .env
+cd backend
+composer install
+cp .env.example .env      # sesuaikan koneksi PostgreSQL & koordinat kantor
 php artisan key:generate
-
-# 5. Sesuaikan koneksi PostgreSQL & koordinat kantor di .env, lalu jalankan migrasi & seeder
 php artisan migrate --seed
-
-# 6. Jalankan server Laravel API
 php artisan serve
 ```
 API akan aktif di `http://localhost:8000/api`.
@@ -96,19 +83,36 @@ Aplikasi frontend akan berjalan di `http://localhost:5173`.
 
 > **Catatan Mode Demo vs Mode API:**
 > Di file `frontend/.env`, variabel `VITE_USE_MOCK=true` diaktifkan secara default agar Anda bisa langsung mencoba seluruh UI/UX (termasuk *Clock In/Out*, simulasi *Geofence*, *Request Overtime*, dan *Export Excel*) bahkan sebelum menjalankan backend Laravel.
-> Ubah menjadi `VITE_USE_MOCK=false` ketika backend Laravel + PostgreSQL sudah berjalan di `http://localhost:8000`.
+> Halaman login hanya berfungsi dengan `VITE_USE_MOCK=false`. Ubah menjadi `VITE_USE_MOCK=false` ketika backend Laravel + PostgreSQL sudah berjalan di `http://localhost:8000`.
 
 ---
 
+## Akun Login (Seed)
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| `hr` | `hr@company.co.id` | `password` |
+| `peserta` (contoh) | `budi.santoso@company.co.id` | `password` |
+
+Setiap karyawan seed punya akun `peserta` dengan email karyawan tersebut. **Ganti password di production.** Login peserta hanya berhasil bila karyawan terkait aktif.
+
 ## Daftar Endpoint API Laravel
 
-| Method | Endpoint | Deskripsi |
-| :--- | :--- | :--- |
-| `GET` | `/api/employees` | Daftar seluruh karyawan beserta shift |
-| `GET` | `/api/employees/{id}/attendance` | Riwayat absensi 1 bulan untuk 1 karyawan (Side-Drawer) |
-| `POST` | `/api/attendance/clock-in` | Clock In dengan validasi koordinat GPS (Haversine Geofencing) |
-| `POST` | `/api/attendance/clock-out` | Clock Out dengan kalkulasi otomatis durasi kerja & menit keluar |
-| `GET` | `/api/admin/attendance-report` | Laporan lengkap 20 kolom (mendukung filter `?search=&month=&date=`) |
-| `GET` | `/api/admin/attendance-report/export` | Unduh CSV/Excel dari backend (global atau per `employee_id`) |
-| `POST` | `/api/overtime-requests` | Pengajuan lembur dari Employee View |
-| `PATCH` | `/api/overtime-requests/{id}/status` | Approval / Reject lembur dari Admin |
+Semua endpoint non-publik memerlukan header `Authorization: Bearer <token>` (token dari `/api/login`).
+
+| Method | Endpoint | Role | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | publik | Cek status API |
+| `POST` | `/api/login` | publik | **Baru.** Login, mengembalikan token |
+| `POST` | `/api/logout` | login | **Baru.** Cabut token saat ini |
+| `GET` | `/api/me` | login | **Baru.** Profil user yang sedang login |
+| `GET` | `/api/me/attendance` | peserta | **Baru.** Riwayat absensi milik sendiri |
+| `POST` | `/api/attendance/clock-in` | peserta | Clock In dengan validasi koordinat GPS (Haversine Geofencing) |
+| `POST` | `/api/attendance/clock-out` | peserta | Clock Out dengan kalkulasi otomatis durasi kerja & menit keluar |
+| `POST` | `/api/overtime-requests` | peserta | Pengajuan lembur |
+| `GET` | `/api/employees` | hr | Daftar seluruh karyawan beserta shift |
+| `GET` | `/api/employees/{id}/attendance` | hr | Riwayat absensi 1 bulan untuk 1 karyawan |
+| `GET` | `/api/overtime-requests` | hr | Daftar pengajuan lembur |
+| `PATCH` | `/api/overtime-requests/{id}/status` | hr | Approval / Reject lembur |
+| `GET` | `/api/admin/attendance-report` | hr | Laporan 20 kolom (filter `?search=&month=&date=`) |
+| `GET` | `/api/admin/attendance-report/export` | hr | Unduh CSV/Excel (global atau per `employee_id`) |
