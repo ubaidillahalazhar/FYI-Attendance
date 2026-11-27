@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck, Smartphone, LayoutDashboard, Database } from 'lucide-react';
+import { ShieldCheck, Smartphone, LayoutDashboard, Database, LogOut } from 'lucide-react';
 import { USE_MOCK } from '../../services/api';
 
-export default function TopModeBar({ mode, setMode }) {
+export default function TopModeBar({ mode, setMode, user, onLogout }) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-navy-900 text-white shadow-sm">
       <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -20,7 +20,19 @@ export default function TopModeBar({ mode, setMode }) {
           </div>
         </div>
 
-        {/* Mode Switcher Tabs */}
+        {user ? (
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-slate-200">{user.name}</span>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center gap-1.5 rounded-md bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-500 sm:text-sm"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
+          </div>
+        ) : (
         <div className="flex items-center rounded-lg bg-navy-950/70 p-1 ring-1 ring-white/10">
           <button
             type="button"
@@ -47,6 +59,7 @@ export default function TopModeBar({ mode, setMode }) {
             <span>Admin Mode</span>
           </button>
         </div>
+        )}
 
         {/* Data Source Indicator */}
         <div className="hidden items-center gap-1.5 rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300 ring-1 ring-white/10 lg:flex">

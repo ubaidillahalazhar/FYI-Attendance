@@ -12,11 +12,17 @@ import {
   formatDateISO,
   formatTimeHHMM,
 } from './utils/timeUtils';
-import { attendanceApi, USE_MOCK } from './services/api';
+import LoginPage from './components/common/LoginPage';
+import { attendanceApi, authApi, employeeApi, USE_MOCK } from './services/api';
 
 export default function App() {
   const [mode, setMode] = useState('employee'); // 'employee' | 'admin'
-  const [records, setRecords] = useState(() => generateInitialAttendanceRecords());
+  const [records, setRecords] = useState(() => (USE_MOCK ? generateInitialAttendanceRecords() : []));
+  const [employees, setEmployees] = useState(EMPLOYEES);
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(USE_MOCK || !authApi.hasToken());
+  // Mock mode: fixed demo employee. API mode: the logged-in peserta (null for HR).
+  const me = USE_MOCK ? CURRENT_EMPLOYEE : user?.employee;
   const [toastMessage, setToastMessage] = useState('');
 
   const showToast = (msg) => {
@@ -24,29 +30,50 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  // Load real data from Laravel + PostgreSQL when USE_MOCK=false
+  // Restore session on load, and drop it when any request returns 401
   useEffect(() => {
     if (USE_MOCK) return;
-    attendanceApi
-      .fetchAdminReport()
-      .then((res) => {
-        if (Array.isArray(res.data)) {
-          setRecords(res.data);
-        }
-      })
-      .catch((err) => {
-        console.warn('API fetch failed, falling back to local demo data:', err.message);
-      });
+    const onLogout = () => setUser(null);
+    window.addEventListener('auth:logout', onLogout);
+    if (authApi.hasToken()) {
+      authApi
+        .me()
+        .then((res) => setUser(res.user))
+        .catch(() => {})
+        .finally(() => setAuthReady(true));
+    }
+    return () => window.removeEventListener('auth:logout', onLogout);
   }, []);
+
+  // Load role-specific data from the API once logged in
+  useEffect(() => {
+    if (USE_MOCK || !user) return;
+    const load =
+      user.role === 'hr'
+        ? Promise.all([attendanceApi.fetchAdminReport(), employeeApi.list()]).then(
+            ([rep, emps]) => {
+              setRecords(rep.data || []);
+              setEmployees(emps.data || []);
+            }
+          )
+        : attendanceApi.fetchMyHistory().then((res) => setRecords(res.data || []));
+    load.catch((err) => showToast(err.message));
+  }, [user]);
+
+  const handleLogout = async () => {
+    await authApi.logout().catch(() => {});
+    setUser(null);
+    setRecords([]);
+  };
 
   const todayISO = formatDateISO(new Date());
 
   const currentEmployeeRecords = useMemo(
     () =>
       records
-        .filter((r) => r.employeeId === CURRENT_EMPLOYEE.id)
+        .filter((r) => r.employeeId === me?.id)
         .sort((a, b) => b.date.localeCompare(a.date)),
-    [records]
+    [records, me]
   );
 
   const todayRecord = useMemo(
@@ -60,7 +87,6 @@ export default function App() {
     if (!USE_MOCK) {
       try {
         const res = await attendanceApi.clockIn({
-          employeeId: CURRENT_EMPLOYEE.id,
           latitude,
           longitude,
         });
@@ -76,31 +102,31 @@ export default function App() {
     }
 
     const metrics = calculateAttendanceMetrics({
-      shiftIn: CURRENT_EMPLOYEE.shiftIn,
-      shiftOut: CURRENT_EMPLOYEE.shiftOut,
+      shiftIn: me.shiftIn,
+      shiftOut: me.shiftOut,
       actualIn: nowTime,
       actualOut: null,
-      shiftScheduleMinute: CURRENT_EMPLOYEE.shiftScheduleMinute,
+      shiftScheduleMinute: me.shiftScheduleMinute,
       overtimeMinutes: 0,
     });
 
     const newRecord = {
       id: Date.now(),
-      employeeId: CURRENT_EMPLOYEE.id,
-      employeeNo: CURRENT_EMPLOYEE.employeeNo,
-      employeeName: CURRENT_EMPLOYEE.name,
-      position: CURRENT_EMPLOYEE.position,
-      department: CURRENT_EMPLOYEE.department,
+      employeeId: me.id,
+      employeeNo: me.employeeNo,
+      employeeName: me.name,
+      position: me.position,
+      department: me.department,
       date: todayISO,
-      shiftName: CURRENT_EMPLOYEE.shiftName,
-      shiftIn: CURRENT_EMPLOYEE.shiftIn,
-      shiftOut: CURRENT_EMPLOYEE.shiftOut,
+      shiftName: me.shiftName,
+      shiftIn: me.shiftIn,
+      shiftOut: me.shiftOut,
       actualIn: nowTime,
       actualOut: '',
       minuteIn: metrics.minuteIn,
       minuteOut: 0,
       actualWorkingMinute: 0,
-      shiftScheduleMinute: CURRENT_EMPLOYEE.shiftScheduleMinute,
+      shiftScheduleMinute: me.shiftScheduleMinute,
       remark: metrics.remark,
       overtimeReason: '-',
       overtimeStart: '-',
@@ -120,7 +146,6 @@ export default function App() {
     if (!USE_MOCK) {
       try {
         const res = await attendanceApi.clockOut({
-          employeeId: CURRENT_EMPLOYEE.id,
           latitude,
           longitude,
         });
@@ -165,7 +190,6 @@ export default function App() {
     if (!USE_MOCK) {
       try {
         await attendanceApi.submitOvertimeRequest({
-          employeeId: CURRENT_EMPLOYEE.id,
           ...payload,
         });
       } catch (err) {
@@ -176,7 +200,7 @@ export default function App() {
 
     setRecords((prev) => {
       const existing = prev.find(
-        (r) => r.employeeId === CURRENT_EMPLOYEE.id && r.date === payload.overtimeDate
+        (r) => r.employeeId === me.id && r.date === payload.overtimeDate
       );
 
       if (existing) {
@@ -197,21 +221,21 @@ export default function App() {
 
       const newOtRecord = {
         id: Date.now(),
-        employeeId: CURRENT_EMPLOYEE.id,
-        employeeNo: CURRENT_EMPLOYEE.employeeNo,
-        employeeName: CURRENT_EMPLOYEE.name,
-        position: CURRENT_EMPLOYEE.position,
-        department: CURRENT_EMPLOYEE.department,
+        employeeId: me.id,
+        employeeNo: me.employeeNo,
+        employeeName: me.name,
+        position: me.position,
+        department: me.department,
         date: payload.overtimeDate,
-        shiftName: CURRENT_EMPLOYEE.shiftName,
-        shiftIn: CURRENT_EMPLOYEE.shiftIn,
-        shiftOut: CURRENT_EMPLOYEE.shiftOut,
-        actualIn: CURRENT_EMPLOYEE.shiftIn,
+        shiftName: me.shiftName,
+        shiftIn: me.shiftIn,
+        shiftOut: me.shiftOut,
+        actualIn: me.shiftIn,
         actualOut: payload.endTime,
         minuteIn: 0,
         minuteOut: payload.overtimeMinutes,
-        actualWorkingMinute: CURRENT_EMPLOYEE.shiftScheduleMinute + payload.overtimeMinutes,
-        shiftScheduleMinute: CURRENT_EMPLOYEE.shiftScheduleMinute,
+        actualWorkingMinute: me.shiftScheduleMinute + payload.overtimeMinutes,
+        shiftScheduleMinute: me.shiftScheduleMinute,
         remark: 'Overtime',
         overtimeReason: payload.reason,
         overtimeStart: payload.startTime,
@@ -227,13 +251,18 @@ export default function App() {
     );
   };
 
+  if (!USE_MOCK && !authReady) return null;
+  if (!USE_MOCK && !user) return <LoginPage onLoggedIn={setUser} />;
+
+  const viewMode = USE_MOCK ? mode : user.role === 'hr' ? 'admin' : 'employee';
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <TopModeBar mode={mode} setMode={setMode} />
+      <TopModeBar mode={viewMode} setMode={setMode} user={user} onLogout={handleLogout} />
 
-      {mode === 'employee' ? (
+      {viewMode === 'employee' ? (
         <EmployeeView
-          employee={CURRENT_EMPLOYEE}
+          employee={me}
           employeeRecords={currentEmployeeRecords}
           todayRecord={todayRecord}
           onClockIn={handleClockIn}
@@ -242,7 +271,7 @@ export default function App() {
           toastMessage={toastMessage}
         />
       ) : (
-        <AdminView employees={EMPLOYEES} records={records} />
+        <AdminView employees={employees} records={records} />
       )}
     </div>
   );
