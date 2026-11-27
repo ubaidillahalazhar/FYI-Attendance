@@ -18,7 +18,7 @@ import { attendanceApi, authApi, employeeApi, USE_MOCK } from './services/api';
 export default function App() {
   const [mode, setMode] = useState('employee'); // 'employee' | 'admin'
   const [records, setRecords] = useState(() => (USE_MOCK ? generateInitialAttendanceRecords() : []));
-  const [employees, setEmployees] = useState(EMPLOYEES);
+  const [employees, setEmployees] = useState(USE_MOCK ? EMPLOYEES : []);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(USE_MOCK || !authApi.hasToken());
   // Mock mode: fixed demo employee. API mode: the logged-in peserta (null for HR).
