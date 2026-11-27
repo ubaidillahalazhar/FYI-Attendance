@@ -93,7 +93,7 @@ class EmployeeController extends Controller
     private function initials(string $name): string
     {
         $words = preg_split('/\s+/', trim($name));
-        $s = count($words) > 1 ? $words[0][0].$words[1][0] : Str::substr($words[0], 0, 2);
+        $s = count($words) > 1 ? Str::substr($words[0], 0, 1).Str::substr($words[1], 0, 1) : Str::substr($words[0], 0, 2);
 
         return Str::upper($s);
     }

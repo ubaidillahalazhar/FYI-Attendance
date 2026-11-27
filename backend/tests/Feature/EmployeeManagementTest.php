@@ -66,6 +66,21 @@ class EmployeeManagementTest extends TestCase
         $this->getJson('/api/shifts')->assertForbidden();
     }
 
+    public function test_peserta_cannot_reset_password(): void
+    {
+        $p = $this->peserta();
+        Sanctum::actingAs($p);
+        $this->putJson("/api/employees/{$p->employee_id}/password", ['password' => 'newpassword1'])->assertForbidden();
+    }
+
+    public function test_initials_are_multibyte_safe(): void
+    {
+        Sanctum::actingAs($this->hr());
+        $this->postJson('/api/employees', $this->payload(['name' => 'Élise Ñoño']))
+            ->assertCreated();
+        $this->assertDatabaseHas('employees', ['employee_no' => 'PKL-001', 'avatar_initials' => 'ÉÑ']);
+    }
+
     private function attend(User $u): void
     {
         Attendance::create([

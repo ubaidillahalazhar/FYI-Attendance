@@ -42,6 +42,7 @@ function ResetPasswordModal({ employee, onClose, onDone }) {
           minLength={8}
           required
           autoFocus
+          aria-label="Password baru"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password baru (min. 8 karakter)"
@@ -61,7 +62,7 @@ function ResetPasswordModal({ employee, onClose, onDone }) {
             disabled={saving}
             className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
           >
-            Simpan
+            {saving ? 'Menyimpan...' : 'Simpan'}
           </button>
         </div>
       </form>
@@ -168,7 +169,9 @@ export default function PesertaPage({ employees, onEmployeeSaved }) {
         </select>
       </div>
 
-      {notice && <p className="mb-3 text-sm text-red-600">{notice}</p>}
+      {notice && (
+        <p className={`mb-3 text-sm ${notice.endsWith('direset.') ? 'text-teal-700' : 'text-red-600'}`}>{notice}</p>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
@@ -244,8 +247,8 @@ export default function PesertaPage({ employees, onEmployeeSaved }) {
           employee={resetFor}
           onClose={() => setResetFor(null)}
           onDone={() => {
+            setNotice(`Password ${resetFor.name} berhasil direset.`);
             setResetFor(null);
-            setNotice('');
           }}
         />
       )}
