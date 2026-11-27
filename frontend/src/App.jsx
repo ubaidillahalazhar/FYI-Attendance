@@ -14,6 +14,7 @@ import {
 } from './utils/timeUtils';
 import LoginPage from './components/common/LoginPage';
 import { attendanceApi, authApi, employeeApi, USE_MOCK } from './services/api';
+import { OFFICE_COORDS } from './utils/geofenceUtils';
 
 export default function App() {
   const [mode, setMode] = useState('employee'); // 'employee' | 'admin'
@@ -23,6 +24,10 @@ export default function App() {
   const [authReady, setAuthReady] = useState(USE_MOCK || !authApi.hasToken());
   // Mock mode: fixed demo employee. API mode: the logged-in peserta (null for HR).
   const me = USE_MOCK ? CURRENT_EMPLOYEE : user?.employee;
+  const office =
+    !USE_MOCK && user?.office
+      ? { name: user.office.name, lat: user.office.lat, lng: user.office.lng, radiusMeters: user.office.radius_meters }
+      : OFFICE_COORDS;
   const [toastMessage, setToastMessage] = useState('');
 
   const showToast = (msg) => {
@@ -64,6 +69,19 @@ export default function App() {
     load.catch((err) => showToast(err.message));
   }, [user]);
 
+  const upsertEmployee = (emp) => {
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.employeeId === emp.id
+          ? { ...r, employeeName: emp.name, employeeNo: emp.employeeNo, position: emp.position, department: emp.department, jenis: emp.jenis, asal: emp.asal }
+          : r
+      )
+    );
+    setEmployees((prev) =>
+      prev.some((e) => e.id === emp.id) ? prev.map((e) => (e.id === emp.id ? emp : e)) : [...prev, emp]
+    );
+  };
+
   const handleLogout = async () => {
     await authApi.logout().catch(() => {});
     setUser(null);
@@ -85,7 +103,7 @@ export default function App() {
     [currentEmployeeRecords, todayISO]
   );
 
-  const handleClockIn = async ({ latitude, longitude }) => {
+  const handleClockIn = async ({ latitude, longitude, accuracy }) => {
     const nowTime = formatTimeHHMM(new Date());
 
     if (!USE_MOCK) {
@@ -93,6 +111,7 @@ export default function App() {
         const res = await attendanceApi.clockIn({
           latitude,
           longitude,
+          accuracy,
         });
         if (res.data) {
           setRecords((prev) => [res.data, ...prev.filter((r) => r.id !== res.data.id)]);
@@ -143,7 +162,7 @@ export default function App() {
     showToast(`Clock In successful at ${nowTime}. Have a productive day!`);
   };
 
-  const handleClockOut = async ({ latitude, longitude }) => {
+  const handleClockOut = async ({ latitude, longitude, accuracy }) => {
     if (!todayRecord) return;
     const nowTime = formatTimeHHMM(new Date());
 
@@ -152,6 +171,7 @@ export default function App() {
         const res = await attendanceApi.clockOut({
           latitude,
           longitude,
+          accuracy,
         });
         if (res.data) {
           setRecords((prev) => prev.map((r) => (r.id === res.data.id ? res.data : r)));
@@ -269,13 +289,14 @@ export default function App() {
           employee={me}
           employeeRecords={currentEmployeeRecords}
           todayRecord={todayRecord}
+          office={office}
           onClockIn={handleClockIn}
           onClockOut={handleClockOut}
           onSubmitOvertime={handleSubmitOvertime}
           toastMessage={toastMessage}
         />
       ) : (
-        <AdminView employees={employees} records={records} />
+        <AdminView employees={employees} records={records} onEmployeeSaved={upsertEmployee} />
       )}
     </div>
   );

@@ -16,6 +16,8 @@ class AttendanceReportResource extends JsonResource
             'employeeName' => $this->employee->name,
             'position' => $this->employee->position,
             'department' => $this->employee->department,
+            'jenis' => $this->employee->jenis,
+            'asal' => $this->employee->asal,
             'date' => optional($this->attendance_date)->format('Y-m-d'),
             'shiftName' => $this->shift->name,
             'shiftIn' => substr($this->shift->shift_in, 0, 5),

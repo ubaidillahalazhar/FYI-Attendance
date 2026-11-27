@@ -13,13 +13,15 @@ import {
 } from 'lucide-react';
 import AttendanceHistoryModal from './AttendanceHistoryModal';
 import OvertimeRequestModal from './OvertimeRequestModal';
-import { checkRealBrowserLocation, OFFICE_COORDS } from '../../utils/geofenceUtils';
+import { checkRealBrowserLocation } from '../../utils/geofenceUtils';
+import { USE_MOCK } from '../../services/api';
 import { formatDateISO } from '../../utils/timeUtils';
 
 export default function EmployeeView({
   employee,
   employeeRecords,
   todayRecord,
+  office,
   onClockIn,
   onClockOut,
   onSubmitOvertime,
@@ -27,7 +29,8 @@ export default function EmployeeView({
 }) {
   const [now, setNow] = useState(new Date());
   const [isInsideGeofence, setIsInsideGeofence] = useState(true);
-  const [distanceMeters, setDistanceMeters] = useState(32);
+  // API mode has no reading until the first Clock In/Out tap.
+  const [distanceMeters, setDistanceMeters] = useState(USE_MOCK ? 32 : null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState('');
 
@@ -39,15 +42,38 @@ export default function EmployeeView({
     return () => clearInterval(timer);
   }, []);
 
-  const handleTestRealGps = async () => {
-    setGpsLoading(true);
+  const takeReading = async () => {
     setGpsError('');
     try {
-      const result = await checkRealBrowserLocation();
+      const result = await checkRealBrowserLocation(office);
       setDistanceMeters(result.distance);
       setIsInsideGeofence(result.isInside);
+      return result;
     } catch (err) {
       setGpsError(err.message);
+      return null;
+    }
+  };
+
+  const handleTestRealGps = async () => {
+    setGpsLoading(true);
+    await takeReading();
+    setGpsLoading(false);
+  };
+
+  // Buttons stay disabled (gpsLoading) through GPS + API so a double tap sends one request.
+  // The server alone decides inside/outside; mock mode sends the office point.
+  const clock = async (handler) => {
+    setGpsLoading(true);
+    try {
+      if (USE_MOCK) {
+        await handler({ latitude: office.lat, longitude: office.lng, accuracy: 0 });
+        return;
+      }
+      const reading = await takeReading();
+      if (reading) {
+        await handler({ latitude: reading.lat, longitude: reading.lng, accuracy: reading.accuracy });
+      }
     } finally {
       setGpsLoading(false);
     }
@@ -69,8 +95,9 @@ export default function EmployeeView({
 
   const hasClockedIn = Boolean(todayRecord?.actualIn);
   const hasClockedOut = Boolean(todayRecord?.actualOut);
-  const clockInDisabled = !isInsideGeofence || hasClockedIn;
-  const clockOutDisabled = !isInsideGeofence || !hasClockedIn || hasClockedOut;
+  const lockedBySimulator = USE_MOCK && !isInsideGeofence;
+  const clockInDisabled = gpsLoading || lockedBySimulator || hasClockedIn;
+  const clockOutDisabled = gpsLoading || lockedBySimulator || !hasClockedIn || hasClockedOut;
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-61px)] max-w-md flex-col px-4 py-6">
@@ -153,11 +180,15 @@ export default function EmployeeView({
                         isInsideGeofence ? 'animate-pulse bg-emerald-500' : 'bg-red-500'
                       }`}
                     />
-                    {isInsideGeofence ? 'Inside Office Area (Valid)' : 'Outside Radius'}
+                    {distanceMeters === null
+                      ? 'Lokasi dicek saat Clock In/Out'
+                      : isInsideGeofence
+                        ? 'Inside Office Area (Valid)'
+                        : 'Outside Radius'}
                   </span>
                   <p className="mt-0.5 text-xs text-slate-600">
-                    {OFFICE_COORDS.name} &middot; {distanceMeters}m from center (max{' '}
-                    {OFFICE_COORDS.radiusMeters}m)
+                    {office.name} &middot; {distanceMeters ?? '-'}m from center (max{' '}
+                    {office.radiusMeters}m)
                   </p>
                 </div>
               </div>
@@ -183,7 +214,13 @@ export default function EmployeeView({
 
           {/* Clock In & Clock Out Buttons */}
           <div>
-            {!isInsideGeofence && (
+            {gpsLoading && (
+              <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-teal-700">
+                <Navigation className="h-3.5 w-3.5 animate-pulse" />
+                <span>Mencari lokasi GPS…</span>
+              </div>
+            )}
+            {lockedBySimulator && (
               <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600">
                 <Lock className="h-3.5 w-3.5" />
                 <span>Clocking locked while outside office geofence</span>
@@ -193,12 +230,7 @@ export default function EmployeeView({
               <button
                 type="button"
                 disabled={clockInDisabled}
-                onClick={() =>
-                  onClockIn({
-                    latitude: OFFICE_COORDS.lat,
-                    longitude: OFFICE_COORDS.lng,
-                  })
-                }
+                onClick={() => clock(onClockIn)}
                 className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl px-4 py-4 text-sm font-semibold transition-all ${
                   clockInDisabled
                     ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 opacity-65'
@@ -212,12 +244,7 @@ export default function EmployeeView({
               <button
                 type="button"
                 disabled={clockOutDisabled}
-                onClick={() =>
-                  onClockOut({
-                    latitude: OFFICE_COORDS.lat,
-                    longitude: OFFICE_COORDS.lng,
-                  })
-                }
+                onClick={() => clock(onClockOut)}
                 className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl px-4 py-4 text-sm font-semibold transition-all ${
                   clockOutDisabled
                     ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 opacity-65'
@@ -266,7 +293,8 @@ export default function EmployeeView({
             </div>
           </div>
 
-          {/* Geofence Demo Controls */}
+          {/* Geofence Demo Controls (demo mode only: real peserta must not fake their status) */}
+          {USE_MOCK && (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -318,6 +346,7 @@ export default function EmployeeView({
               Active date: {formatDateISO(now)} &middot; Toggle status above to test button lock.
             </p>
           </div>
+          )}
         </div>
       </div>
 

@@ -82,6 +82,29 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Reject fixes too imprecise to tell inside from outside; the peserta is told to retry.
+     */
+    private function accuracyError(float $accuracy): ?JsonResponse
+    {
+        $max = config('geofence.max_accuracy_meters');
+        if ($accuracy <= $max) {
+            return null;
+        }
+        $acc = (int) round($accuracy);
+
+        // ponytail: >1000 m means the OS only shares approximate location; retrying won't help.
+        if ($accuracy > 1000) {
+            return response()->json([
+                'message' => "Lokasi HP hanya perkiraan (±{$acc} m). Aktifkan 'Lokasi Akurat / Precise Location' untuk browser ini, lalu ulangi.",
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => "Akurasi GPS ±{$acc} m terlalu rendah (maks {$max} m). Coba dekat jendela atau area terbuka, lalu ulangi.",
+        ], 422);
+    }
+
+    /**
      * Clock In with Geofencing Radius Validation.
      */
     public function clockIn(Request $request): JsonResponse
@@ -89,7 +112,12 @@ class AttendanceController extends Controller
         $validated = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'accuracy' => ['required', 'numeric', 'min:0'],
         ]);
+
+        if ($error = $this->accuracyError((float) $validated['accuracy'])) {
+            return $error;
+        }
 
         $geo = $this->geofenceService->validateLocation(
             (float) $validated['latitude'],
@@ -134,6 +162,7 @@ class AttendanceController extends Controller
                 'clock_in_lat' => $validated['latitude'],
                 'clock_in_lng' => $validated['longitude'],
                 'distance_in_meters' => $geo['distance_meters'],
+                'clock_in_accuracy_m' => (int) round($validated['accuracy']),
                 ...$metrics,
             ]
         );
@@ -155,7 +184,12 @@ class AttendanceController extends Controller
         $validated = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'accuracy' => ['required', 'numeric', 'min:0'],
         ]);
+
+        if ($error = $this->accuracyError((float) $validated['accuracy'])) {
+            return $error;
+        }
 
         $geo = $this->geofenceService->validateLocation(
             (float) $validated['latitude'],
@@ -196,6 +230,8 @@ class AttendanceController extends Controller
             'actual_out' => $nowTime,
             'clock_out_lat' => $validated['latitude'],
             'clock_out_lng' => $validated['longitude'],
+            'clock_out_distance_m' => $geo['distance_meters'],
+            'clock_out_accuracy_m' => (int) round($validated['accuracy']),
             ...$metrics,
         ]);
 
@@ -232,11 +268,12 @@ class AttendanceController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             fputcsv($handle, [
-                'No.', 'Employee No.', 'Employee Name', 'Date', 'Position',
+                'No.', 'Employee No.', 'Employee Name', 'Jenis', 'Asal', 'Date', 'Position',
                 'Shift Name', 'Shift In', 'Shift Out', 'Actual In', 'Actual Out',
                 'Minute In', 'Minute Out', 'Actual Working Minute', 'Shift Schedule Minute',
                 'Remark', 'Overtime Reason', 'Overtime Start', 'Overtime End',
                 'Overtime Minute(s)', 'Overtime Hour(s)',
+                'Clock In Distance (m)', 'Clock In Accuracy (m)', 'Clock Out Distance (m)', 'Clock Out Accuracy (m)',
             ]);
 
             foreach ($rows as $index => $row) {
@@ -244,6 +281,8 @@ class AttendanceController extends Controller
                     $index + 1,
                     $row->employee->employee_no,
                     $row->employee->name,
+                    ['pkl' => 'PKL', 'outsourcing' => 'Outsourcing'][$row->employee->jenis] ?? '',
+                    $row->employee->asal,
                     $row->attendance_date->format('Y-m-d'),
                     $row->employee->position,
                     $row->shift->name,
@@ -261,6 +300,10 @@ class AttendanceController extends Controller
                     $row->overtime_end ? substr($row->overtime_end, 0, 5) : '-',
                     $row->overtime_minutes,
                     number_format((float) $row->overtime_hours, 2),
+                    $row->distance_in_meters ?? '-',
+                    $row->clock_in_accuracy_m ?? '-',
+                    $row->clock_out_distance_m ?? '-',
+                    $row->clock_out_accuracy_m ?? '-',
                 ]);
             }
 

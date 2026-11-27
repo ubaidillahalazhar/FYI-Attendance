@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// Relative by default: Vite proxies /api to Laravel, so no CORS and it works from a phone on the LAN.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
 
 const TOKEN_KEY = 'geoattend_token';
@@ -23,7 +24,9 @@ async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || `API Error (${response.status})`);
+    const err = new Error(errData.message || `API Error (${response.status})`);
+    err.errors = errData.errors;
+    throw err;
   }
 
   if (response.status === 204) return null;
@@ -54,6 +57,20 @@ export const authApi = {
 
 export const employeeApi = {
   list: () => request('/employees'),
+  create: (payload) => request('/employees', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (id, payload) =>
+    request(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  setStatus: (id, isActive) =>
+    request(`/employees/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    }),
+  resetPassword: (id, password) =>
+    request(`/employees/${id}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
+};
+
+export const shiftApi = {
+  list: () => request('/shifts'),
 };
 
 export const attendanceApi = {
@@ -72,17 +89,17 @@ export const attendanceApi = {
     return request(`/employees/${employeeId}/attendance${query}`);
   },
 
-  async clockIn({ latitude, longitude }) {
+  async clockIn({ latitude, longitude, accuracy }) {
     return request('/attendance/clock-in', {
       method: 'POST',
-      body: JSON.stringify({ latitude, longitude }),
+      body: JSON.stringify({ latitude, longitude, accuracy }),
     });
   },
 
-  async clockOut({ latitude, longitude }) {
+  async clockOut({ latitude, longitude, accuracy }) {
     return request('/attendance/clock-out', {
       method: 'POST',
-      body: JSON.stringify({ latitude, longitude }),
+      body: JSON.stringify({ latitude, longitude, accuracy }),
     });
   },
 
