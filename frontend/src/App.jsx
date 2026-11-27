@@ -64,6 +64,11 @@ export default function App() {
     load.catch((err) => showToast(err.message));
   }, [user]);
 
+  const upsertEmployee = (emp) =>
+    setEmployees((prev) =>
+      prev.some((e) => e.id === emp.id) ? prev.map((e) => (e.id === emp.id ? emp : e)) : [...prev, emp]
+    );
+
   const handleLogout = async () => {
     await authApi.logout().catch(() => {});
     setUser(null);
@@ -275,7 +280,7 @@ export default function App() {
           toastMessage={toastMessage}
         />
       ) : (
-        <AdminView employees={employees} records={records} />
+        <AdminView employees={employees} records={records} onEmployeeSaved={upsertEmployee} />
       )}
     </div>
   );

@@ -23,7 +23,9 @@ async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || `API Error (${response.status})`);
+    const err = new Error(errData.message || `API Error (${response.status})`);
+    err.errors = errData.errors;
+    throw err;
   }
 
   if (response.status === 204) return null;
@@ -54,6 +56,20 @@ export const authApi = {
 
 export const employeeApi = {
   list: () => request('/employees'),
+  create: (payload) => request('/employees', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (id, payload) =>
+    request(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  setStatus: (id, isActive) =>
+    request(`/employees/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    }),
+  resetPassword: (id, password) =>
+    request(`/employees/${id}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
+};
+
+export const shiftApi = {
+  list: () => request('/shifts'),
 };
 
 export const attendanceApi = {
