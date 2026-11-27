@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: geoattend_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: geoattend_hr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      TZ: Asia/Jakarta
+    ports:
+      - "5432:5432"
+    volumes:
+      - geoattend_pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+volumes:
+  geoattend_pgdata:
