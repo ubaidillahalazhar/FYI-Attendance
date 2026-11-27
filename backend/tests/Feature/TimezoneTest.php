@@ -26,7 +26,7 @@ class TimezoneTest extends TestCase
         ]);
         Sanctum::actingAs(User::factory()->create(['email' => 'e@x.id', 'role' => 'peserta', 'employee_id' => $emp->id]));
 
-        $this->postJson('/api/attendance/clock-in', ['latitude' => -6.3017, 'longitude' => 107.1705])->assertCreated();
+        $this->postJson('/api/attendance/clock-in', ['latitude' => -6.3017, 'longitude' => 107.1705, 'accuracy' => 10])->assertCreated();
 
         $row = $emp->attendances()->first() ?? \App\Models\Attendance::where('employee_id', $emp->id)->first();
         $this->assertSame('2026-11-27', $row->attendance_date->toDateString());

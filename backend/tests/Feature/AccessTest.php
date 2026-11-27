@@ -14,7 +14,7 @@ class AccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const GEO = ['latitude' => -6.3017, 'longitude' => 107.1705];
+    private const GEO = ['latitude' => -6.3017, 'longitude' => 107.1705, 'accuracy' => 10];
 
     private Shift $shift;
 

@@ -53,6 +53,13 @@ class AuthController extends Controller
             'email' => $user->email,
             'role' => $user->role,
             'employee' => $user->employee ? new EmployeeResource($user->employee) : null,
+            'office' => [
+                'name' => config('geofence.office_name'),
+                'lat' => config('geofence.office_lat'),
+                'lng' => config('geofence.office_lng'),
+                'radius_meters' => config('geofence.radius_meters'),
+                'max_accuracy_meters' => config('geofence.max_accuracy_meters'),
+            ],
         ];
     }
 }

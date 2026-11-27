@@ -5,4 +5,5 @@ return [
     'office_lat' => (float) env('OFFICE_LAT', -6.3017),
     'office_lng' => (float) env('OFFICE_LNG', 107.1705),
     'radius_meters' => (int) env('OFFICE_RADIUS_METERS', 150),
+    'max_accuracy_meters' => (int) env('GEOFENCE_MAX_ACCURACY_METERS', 100),
 ];
