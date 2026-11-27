@@ -17,6 +17,8 @@ class Employee extends Model
         'shift_id',
         'avatar_initials',
         'is_active',
+        'jenis',
+        'asal',
     ];
 
     protected $casts = [

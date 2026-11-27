@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OvertimeController;
+use App\Http\Controllers\Api\ShiftController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'db' => 'postgresql']));
@@ -23,6 +24,7 @@ Route::middleware(['auth:sanctum', 'can:peserta'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'can:hr'])->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index']);
+    Route::get('/shifts', [ShiftController::class, 'index']);
     Route::get('/employees/{employee}/attendance', [AttendanceController::class, 'employeeMonthlyHistory']);
     Route::get('/overtime-requests', [OvertimeController::class, 'index']);
     Route::patch('/overtime-requests/{overtimeRequest}/status', [OvertimeController::class, 'updateStatus']);

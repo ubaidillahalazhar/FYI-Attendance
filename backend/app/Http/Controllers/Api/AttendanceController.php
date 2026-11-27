@@ -232,7 +232,7 @@ class AttendanceController extends Controller
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             fputcsv($handle, [
-                'No.', 'Employee No.', 'Employee Name', 'Date', 'Position',
+                'No.', 'Employee No.', 'Employee Name', 'Jenis', 'Asal', 'Date', 'Position',
                 'Shift Name', 'Shift In', 'Shift Out', 'Actual In', 'Actual Out',
                 'Minute In', 'Minute Out', 'Actual Working Minute', 'Shift Schedule Minute',
                 'Remark', 'Overtime Reason', 'Overtime Start', 'Overtime End',
@@ -244,6 +244,8 @@ class AttendanceController extends Controller
                     $index + 1,
                     $row->employee->employee_no,
                     $row->employee->name,
+                    ['pkl' => 'PKL', 'outsourcing' => 'Outsourcing'][$row->employee->jenis] ?? '',
+                    $row->employee->asal,
                     $row->attendance_date->format('Y-m-d'),
                     $row->employee->position,
                     $row->shift->name,
