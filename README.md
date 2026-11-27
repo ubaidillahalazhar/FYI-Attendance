@@ -51,7 +51,7 @@ PostgreSQL akan berjalan di `localhost:5432` dengan kredensial:
 - Password: `postgres_password`
 
 **Opsi B — PostgreSQL Lokal:**
-Buat database bernama `geoattend_hr`, lalu jalankan migrasi Laravel (langkah 2) atau import `database/schema.sql`.
+Buat database bernama `geoattend_hr`, lalu jalankan migrasi Laravel (langkah 2: `php artisan migrate --seed`). Migrasi wajib karena tabel `users`, `personal_access_tokens`, dan `cache` tidak ada di `database/schema.sql`.
 
 ---
 
@@ -83,7 +83,7 @@ Aplikasi frontend akan berjalan di `http://localhost:5173`.
 
 > **Catatan Mode Demo vs Mode API:**
 > Di file `frontend/.env`, variabel `VITE_USE_MOCK=true` diaktifkan secara default agar Anda bisa langsung mencoba seluruh UI/UX (termasuk *Clock In/Out*, simulasi *Geofence*, *Request Overtime*, dan *Export Excel*) bahkan sebelum menjalankan backend Laravel.
-> Halaman login hanya berfungsi dengan `VITE_USE_MOCK=false`. Ubah menjadi `VITE_USE_MOCK=false` ketika backend Laravel + PostgreSQL sudah berjalan di `http://localhost:8000`.
+> Halaman login hanya berfungsi dengan `VITE_USE_MOCK=false`; setel nilai itu ketika backend Laravel + PostgreSQL sudah berjalan di `http://localhost:8000`.
 
 ---
 

@@ -50,6 +50,16 @@ class AccessTest extends TestCase
         $this->assertDatabaseMissing('attendances', ['employee_id' => $other->employee_id]);
     }
 
+    public function test_peserta_clock_out_after_clock_in(): void
+    {
+        $budi = $this->peserta('EMP-1');
+        Sanctum::actingAs($budi);
+        $this->postJson('/api/attendance/clock-in', self::GEO)->assertCreated();
+        $this->postJson('/api/attendance/clock-out', self::GEO)->assertOk();
+        $row = Attendance::where('employee_id', $budi->employee_id)->first();
+        $this->assertNotNull($row->actual_out);
+    }
+
     public function test_hr_cannot_clock_in(): void
     {
         Sanctum::actingAs($this->hr());

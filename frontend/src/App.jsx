@@ -33,7 +33,11 @@ export default function App() {
   // Restore session on load, and drop it when any request returns 401
   useEffect(() => {
     if (USE_MOCK) return;
-    const onLogout = () => setUser(null);
+    const onLogout = () => {
+      setUser(null);
+      setRecords([]);
+      setEmployees([]);
+    };
     window.addEventListener('auth:logout', onLogout);
     if (authApi.hasToken()) {
       authApi

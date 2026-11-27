@@ -98,11 +98,4 @@ export const attendanceApi = {
     });
   },
 
-  getBackendExportUrl({ employeeId = '', month = '', search = '' } = {}) {
-    const params = new URLSearchParams();
-    if (employeeId) params.append('employee_id', employeeId);
-    if (month) params.append('month', month);
-    if (search) params.append('search', search);
-    return `${API_BASE_URL}/admin/attendance-report/export?${params.toString()}`;
-  },
 };

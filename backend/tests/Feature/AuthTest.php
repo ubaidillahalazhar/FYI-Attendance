@@ -64,6 +64,18 @@ class AuthTest extends TestCase
         $this->postJson('/api/login', ['email' => 'x@y.z', 'password' => 'bad'])->assertStatus(429);
     }
 
+    public function test_login_throttle_is_per_email_not_per_ip(): void
+    {
+        for ($i = 1; $i <= 6; $i++) {
+            $this->postJson('/api/login', ['email' => "u$i@y.z", 'password' => 'bad'])->assertStatus(422);
+        }
+    }
+
+    public function test_unauthenticated_api_without_accept_header_is_401(): void
+    {
+        $this->get('/api/me')->assertStatus(401);
+    }
+
     public function test_me_requires_token(): void
     {
         $this->getJson('/api/me')->assertUnauthorized();
