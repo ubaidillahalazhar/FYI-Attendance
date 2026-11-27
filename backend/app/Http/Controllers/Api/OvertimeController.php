@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\Employee;
 use App\Models\OvertimeRequest;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -26,20 +25,20 @@ class OvertimeController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
             'overtime_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'reason' => ['required', 'string', 'max:1000'],
         ]);
 
+        $employee = $request->user()->employee;
         $start = Carbon::createFromFormat('H:i', $validated['start_time']);
         $end = Carbon::createFromFormat('H:i', $validated['end_time']);
         $durationMinutes = (int) $start->diffInMinutes($end);
         $durationHours = round($durationMinutes / 60, 2);
 
         $otRequest = OvertimeRequest::create([
-            'employee_id' => $validated['employee_id'],
+            'employee_id' => $employee->id,
             'overtime_date' => $validated['overtime_date'],
             'start_time' => $validated['start_time'] . ':00',
             'end_time' => $validated['end_time'] . ':00',
@@ -49,7 +48,6 @@ class OvertimeController extends Controller
         ]);
 
         // Sync overtime metadata into attendance table if record exists
-        $employee = Employee::findOrFail($validated['employee_id']);
         $attendance = Attendance::where('employee_id', $employee->id)
             ->whereDate('attendance_date', $validated['overtime_date'])
             ->first();

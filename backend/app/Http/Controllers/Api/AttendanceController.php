@@ -76,13 +76,17 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function myHistory(Request $request): JsonResponse
+    {
+        return $this->employeeMonthlyHistory($request, $request->user()->employee);
+    }
+
     /**
      * Clock In with Geofencing Radius Validation.
      */
     public function clockIn(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
@@ -99,7 +103,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $employee = Employee::with('shift')->findOrFail($validated['employee_id']);
+        $employee = $request->user()->employee->load('shift');
         $today = now()->toDateString();
         $nowTime = now()->format('H:i:s');
 
@@ -149,7 +153,6 @@ class AttendanceController extends Controller
     public function clockOut(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
@@ -168,7 +171,7 @@ class AttendanceController extends Controller
 
         $today = now()->toDateString();
         $attendance = Attendance::with(['employee', 'shift'])
-            ->where('employee_id', $validated['employee_id'])
+            ->where('employee_id', $request->user()->employee_id)
             ->whereDate('attendance_date', $today)
             ->first();
 
