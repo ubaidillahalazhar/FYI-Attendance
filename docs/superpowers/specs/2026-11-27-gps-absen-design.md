@@ -38,7 +38,7 @@ bukti peserta hadir di kantor.
 
 ## Keputusan builder (calls)
 - `accuracy` wajib di request clock-in/out (numeric, ≥ 0).
-- 4 kolom nullable di `attendances`: `clock_in_distance_m`, `clock_in_accuracy_m`,
+- Kolom `distance_in_meters` yang sudah ada dipakai untuk jarak clock-in; 3 kolom nullable baru: `clock_in_accuracy_m`,
   `clock_out_distance_m`, `clock_out_accuracy_m` (integer meter).
 - `getCurrentPosition` dengan `enableHighAccuracy: true, maximumAge: 0, timeout: 15000`.
 - Mode demo (mock) tetap memakai simulator & koordinat kantor.
